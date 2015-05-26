@@ -68,16 +68,16 @@ def make_scholar_request_from_filtered_json(data, parsed_data, worker_id):
                     line = {'title': publi['title'], 'citation_count': querier.articles[0]['num_citations']}
                     # print publi['title']:querier.articles[0]['num_citations']
                     print line
+                    result += [line]
+                    if len(result) > 10:
+                        return parsed_data+result
                 except:
                     print 'error %s' % (publi['title'])
                     print(traceback.format_exc())
                     #         line = {'title': publi['title'], 'citation_count': 0}
 
-                result+=[line]
-                if len(result) > 10:
-                    return parsed_data+result
                 # just wait before making the new query
-                time.sleep(randint(40,120))
+                time.sleep(randint(40, 120))
 
     return parsed_data+result
 
