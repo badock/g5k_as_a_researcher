@@ -41,9 +41,10 @@ from random import randint
 #
 #     return parsed_data+result
 
+
 # worker_id = 0 or 1
 def make_scholar_request_from_filtered_json(data, parsed_data, worker_id):
-    result=[]
+    result = []
     for publi in data:
         index = data.index(publi)
         if (index % 2) != worker_id:
@@ -51,7 +52,7 @@ def make_scholar_request_from_filtered_json(data, parsed_data, worker_id):
         if publi['type'] == 'found-in-pdf' or publi['type'] == 'found-in-collaboration':
             # print index
             # continue
-            if not is_parsed(publi['title'], parsed_data+result):
+            if not is_parsed(publi['title'], parsed_data + result):
                 querier = scholar.ScholarQuerier()
                 query = scholar.SearchScholarQuery()
                 query.set_num_page_results(1)
@@ -60,18 +61,21 @@ def make_scholar_request_from_filtered_json(data, parsed_data, worker_id):
                 request_success = querier.send_query(query)
                 if request_success:
                     if len(querier.articles) > 0:
-                        line = {'title': publi['title'], 'citation_count': querier.articles[0]['num_citations']}
+                        line = {
+                            'title': publi['title'],
+                            'citation_count': querier.articles[0]['num_citations']
+                        }
                     else:
                         line = {'title': publi['title'], 'citation_count': -1}
                     print line
                     result += [line]
                     if len(result) > 10:
-                        return parsed_data+result
+                        return parsed_data + result
                 else:
                     print 'Error 503'
                 # just wait before making the new query
                 time.sleep(randint(40, 120))
-    return parsed_data+result
+    return parsed_data + result
 
 
 def is_parsed(title, data):
@@ -80,10 +84,12 @@ def is_parsed(title, data):
             return True
     return False
 
+
 def filter_G5K_pub(data):
-    result=[]
+    result = []
     for internal_key in data:
-        domains = data[internal_key]['domains'] # because there is one internal level, I don't know why but ..
+        # because there is one internal level, I don't know why but ..
+        domains = data[internal_key]['domains']
         for domain_key in domains:
             teams = domains[domain_key]['teams']
             for team_key in teams:
