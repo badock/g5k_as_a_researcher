@@ -55,8 +55,8 @@ def make_scholar_request_from_filtered_json(data, parsed_data, worker_id):
         if (index % 2) != worker_id:
             continue
         if publi['type'] == 'found-in-pdf' or publi['type'] == 'found-in-collaboration':
-            print index
-            continue
+            # print index
+            # continue
             if not is_parsed(publi['title'], parsed_data+result):
                 querier = scholar.ScholarQuerier()
                 query = scholar.SearchScholarQuery()
@@ -120,9 +120,9 @@ def main():
     # Get the input
     result_file_path = './result_%i.json' % (worker_id)
 
-    for i in range(0,30):
+    for i in range(0, 30):
         try:
-            with open (result_file_path) as parsed_data_file:
+            with open(result_file_path) as parsed_data_file:
                 parsed_data = json.load(parsed_data_file)
         except:
             parsed_data=[]
@@ -130,7 +130,6 @@ def main():
         print len(parsed_data)
 
         result = make_scholar_request_from_filtered_json(data,parsed_data,worker_id)
-
 
         with open (result_file_path, 'w') as outfile:
             json.dump(result, outfile)
