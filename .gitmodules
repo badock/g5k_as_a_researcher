@@ -1,0 +1,3 @@
+[submodule "scholar.py"]
+	path = lib/scholar
+	url = https://github.com/badock/scholar.py
