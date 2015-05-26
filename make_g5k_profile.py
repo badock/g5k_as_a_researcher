@@ -63,19 +63,17 @@ def make_scholar_request_from_filtered_json(data, parsed_data, worker_id):
                 query.set_num_page_results(1)
                 query.set_phrase(publi['title'])
                 # query.set_phrase('Entropy: a consolidation manager for clusters')
-                querier.send_query(query)
-                try:
-                    line = {'title': publi['title'], 'citation_count': querier.articles[0]['num_citations']}
-                    # print publi['title']:querier.articles[0]['num_citations']
+                if (querier.send_query(query)) == True :
+                    if(len(querier.articles) >= 1):
+                        line = {'title': publi['title'], 'citation_count': querier.articles[0]['num_citations']}
+                    else:
+                        line = {'title': publi['title'], 'citation_count': -1}
                     print line
                     result += [line]
                     if len(result) > 10:
-                        return parsed_data+result
-                except:
-                    print 'error %s' % (publi['title'])
-                    print(traceback.format_exc())
-                    #         line = {'title': publi['title'], 'citation_count': 0}
-
+                            return parsed_data+result
+                else:
+                    print 'Error 503'
                 # just wait before making the new query
                 time.sleep(randint(40, 120))
 
@@ -105,7 +103,7 @@ def filter_G5K_pub(data):
 
 def main():
 
-    worker_id = 1
+    worker_id = 0
     # Get the input
     try:
         with open('./index-g5k.json') as data_file:
