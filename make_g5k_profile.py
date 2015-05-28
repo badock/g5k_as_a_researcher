@@ -1,13 +1,12 @@
 __author__ = 'alebre'
 
 import json
-import os
 import scholar
 import sys
 import time
 import traceback
 from random import randint
-from selenium import webdriver
+
 
 def make_scholar_request_fromhal(data, parsed_data):
     result=[]
@@ -47,37 +46,51 @@ def make_scholar_request_fromhal(data, parsed_data):
 
     return parsed_data+result
 
+
+def make_scholar_request(title):
+    citations_nb = 0
+    querier = scholar.ScholarQuerier()
+    query = scholar.SearchScholarQuery()
+    query.set_num_page_results(1)
+    query.set_phrase(title)
+    if (querier.send_query(query)) == True :
+        if(len(querier.articles) >= 1):
+            citations_nb = querier.articles[0]['num_citations']
+        else:
+            citations_nb = -1
+    else:
+        print 'Error 503'
+        citations_nb = -2
+    return citations_nb
+
+
+
+def get_year(raw_publis, title):
+    for raw_publi in raw_publis:
+        if raw_publi['title'] == title:
+            return raw_publi['submission_date']
+    return -1
+
+
 # worker_id = 0 or 1
-def make_scholar_request_from_filtered_json(data, parsed_data, worker_id):
+def make_scholar_request_from_filtered_json(raw_publis, parsed_data):
+
     result=[]
-    for publi in data:
-        index = data.index(publi)
-        if (index % 2) != worker_id:
-            continue
+
+    for publi in raw_publis:
         if publi['type'] == 'found-in-pdf' or publi['type'] == 'found-in-collaboration':
-            # print index
-            # continue
             if not is_parsed(publi['title'], parsed_data+result):
-                querier = scholar.ScholarQuerier()
-                query = scholar.SearchScholarQuery()
-                query.set_num_page_results(1)
-                query.set_phrase(publi['title'])
-                # query.set_phrase('Entropy: a consolidation manager for clusters')
-                if (querier.send_query(query)) == True :
-                    if(len(querier.articles) >= 1):
-                        line = {'title': publi['title'], 'citation_count': querier.articles[0]['num_citations']}
-                    else:
-                        line = {'title': publi['title'], 'citation_count': -1}
-                    print line
-                    result += [line]
-                    if len(result) > 10:
-                            return parsed_data+result
-                else:
-                    print 'Error 503'
+                citations_nb = make_scholar_request(publi['title'])
+                line = {'title': publi['title'], 'citation_count': citations_nb, 'year': time.strptime(get_year(raw_publis, publi['title']), "%Y-%m-%d").tm_year}
+                print line
+                result += [line]
+                if len(result) > 10:
+                    return parsed_data+result
+
                 # just wait before making the new query
                 time.sleep(randint(40, 120))
 
-    return parsed_data+result
+    return parsed_data + result
 
 
 def is_parsed(title, data):
@@ -86,6 +99,9 @@ def is_parsed(title, data):
             return True
     return False
 
+
+# Retrieve all publications related to G5K (and only related to G5K)
+# data, the json file returned by g5kbib
 def filter_G5K_pub(data):
     result=[]
     for internal_key in data:
@@ -101,9 +117,17 @@ def filter_G5K_pub(data):
 
     return result
 
+
+def check_nonevaluated(list_publis):
+    for publi in list_publis:
+        if(publi['citation_count'] <= -1):
+            publi['citation_count']= make_scholar_request(publi['title'])
+            # wait before making the next query if the previous one succeeded.
+            if (publi['citation_count'] > -2):
+                time.sleep(randint(40, 120))
+
 def main():
 
-    worker_id = 0
     # Get the input
     try:
         with open('./index-g5k.json') as data_file:
@@ -116,7 +140,7 @@ def main():
                 json.dump(data, outfile_g5k)
 
     # Get the input
-    result_file_path = './result_%i.json' % (worker_id)
+    result_file_path = './result.json'
 
     for i in range(0, 30):
         try:
@@ -127,10 +151,15 @@ def main():
 
         print len(parsed_data)
 
-        result = make_scholar_request_from_filtered_json(data,parsed_data,worker_id)
+        result = make_scholar_request_from_filtered_json(data,parsed_data)
 
         with open (result_file_path, 'w') as outfile:
             json.dump(result, outfile)
+
+    # Check once again the non evaluated request (request that get either no publication or 503 error)
+    check_nonevaluated(result)
+    with open (result_file_path, 'w') as outfile:
+        json.dump(result, outfile)
 
 if __name__ == "__main__":
     sys.exit(main())
